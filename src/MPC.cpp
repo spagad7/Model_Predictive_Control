@@ -6,12 +6,12 @@
 
 using CppAD::AD;
 
-size_t N = 40;
-double dt = 0.05;
+size_t N = 20;
+double dt = 0.1;
 const double Lf = 2.67;     // Lf is the length from front to CoG that has a similar radius
 const double cte_ref = 0.0;
 const double epsi_ref = 0.0;
-const double v_ref = 50;    // increase v_ref value to increase speed of the car
+const double v_ref = 100;    // increase v_ref value to increase speed of the car
 // set up indices
 // [x1, x2, ..xN, y1, y2, ..yN, psi1, psi2, ..psiN, v1, v2, ..vN, 
 // cte1, cte2, ..cteN, epsi1, epsi2, ...epsiN,
@@ -42,24 +42,24 @@ class FG_eval {
     // set up cost/objective function, FG_eval expects cost function in fg[0]
     fg[0] = 0.0;
     // penalize cross track error, orientation erro and velocity error
-    for(int t = 0; t < N; ++t) {
+    for(uint32_t t = 0; t < N; ++t) {
       fg[0] += CppAD::pow(vars[cte_start + t] - cte_ref, 2);
       fg[0] += CppAD::pow(vars[epsi_start + t] - epsi_ref, 2);
       fg[0] += CppAD::pow(vars[v_start + t] - v_ref, 2);
     }
     // penalize actuations
-    for(int t = 0; t < N-1; ++t) {
+    for(uint32_t t = 0; t < N-1; ++t) {
       fg[0] += CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
     // penalize change in actuations
-    for(int t = 0; t < N-2; ++t) {
+    for(uint32_t t = 0; t < N-2; ++t) {
       fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     // set up constraints
-    for(int t = 1; t < N; ++t) {
+    for(uint32_t t = 1; t < N; ++t) {
       AD<double> x1 = vars[x_start + t];
       AD<double> y1 = vars[y_start + t];
       AD<double> psi1 = vars[psi_start + t];
@@ -99,7 +99,6 @@ MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
-  size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
   size_t n_vars = N * 6 + (N-1) * 2;  // number of variables
   size_t n_constraints = N * 6;       // number of constraints
@@ -114,7 +113,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Initial value of the independent variables.
   // SHOULD BE 0 besides initial state.
   Dvector vars(n_vars);
-  for (int i = 0; i < n_vars; i++) {
+  for (uint32_t i = 0; i < n_vars; i++) {
     vars[i] = 0;
   }
 
@@ -129,20 +128,20 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
   // set lower and upper limits for variables.
-  for(int i = 0; i < delta_start; ++i) {
+  for(uint32_t i = 0; i < delta_start; ++i) {
     vars_lowerbound[i] = -1.0e19;
     vars_upperbound[i] = 1.0e19;
   }
 
   // set lower and upper limits for delta
   double steer_limit_deg = 25;
-  for(int i = delta_start; i < a_start; ++i) {
+  for(uint32_t i = delta_start; i < a_start; ++i) {
     vars_lowerbound[i] = -steer_limit_deg / 180.0 * M_PI;
     vars_upperbound[i] = steer_limit_deg / 180.0 * M_PI;
   }
 
   // set lower and upper limit for acceleration
-  for(int i = a_start; i < n_vars; ++i) {
+  for(uint32_t i = a_start; i < n_vars; ++i) {
     vars_lowerbound[i] = -1;
     vars_upperbound[i] = 1;
   }
@@ -152,24 +151,24 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Should be 0 besides initial state.
   Dvector constraints_lowerbound(n_constraints);
   Dvector constraints_upperbound(n_constraints);
-  for (int i = 0; i < n_constraints; i++) {
+  for (uint32_t i = 0; i < n_constraints; i++) {
     constraints_lowerbound[i] = 0.0;
     constraints_upperbound[i] = 0.0;
   }
 
-  constaints_lowerbound[x_start] = x;
-  constaints_lowerbound[y_start] = y;
-  constaints_lowerbound[psi_start] = psi;
-  constaints_lowerbound[v_start] = v;
-  constaints_lowerbound[cte_start] = cte;
-  constaints_lowerbound[epsi_start] = epsi;
+  constraints_lowerbound[x_start] = x;
+  constraints_lowerbound[y_start] = y;
+  constraints_lowerbound[psi_start] = psi;
+  constraints_lowerbound[v_start] = v;
+  constraints_lowerbound[cte_start] = cte;
+  constraints_lowerbound[epsi_start] = epsi;
 
-  constaints_upperbound[x_start] = x;
-  constaints_upperbound[y_start] = y;
-  constaints_upperbound[psi_start] = psi;
-  constaints_upperbound[v_start] = v;
-  constaints_upperbound[cte_start] = cte;
-  constaints_upperbound[epsi_start] = epsi;
+  constraints_upperbound[x_start] = x;
+  constraints_upperbound[y_start] = y;
+  constraints_upperbound[psi_start] = psi;
+  constraints_upperbound[v_start] = v;
+  constraints_upperbound[cte_start] = cte;
+  constraints_upperbound[epsi_start] = epsi;
 
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
@@ -207,9 +206,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   result.push_back(solution.x[delta_start]);
   result.push_back(solution.x[a_start]);
   // add all x and y values to plot predicted path in the simulator
-  for(int i = 0; i < N-1; ++i) {
-    result.push_back(solution.x[x_start + 1 + i]);
-    result.push_back(solution.x[y_start + 1 + i]);
+  for(uint32_t i = 0; i < N; ++i) {
+    result.push_back(solution.x[x_start + i]);
+    result.push_back(solution.x[y_start + i]);
   }
 
   return result;
