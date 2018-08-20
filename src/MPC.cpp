@@ -12,6 +12,16 @@ const double Lf = 2.67;     // Lf is the length from front to CoG that has a sim
 const double cte_ref = 0.0;
 const double epsi_ref = 0.0;
 const double v_ref = 100;    // increase v_ref value to increase speed of the car
+
+// weigths for cost function
+double w_cte = 4000;
+double w_epsi = 2000;
+double w_v = 1;
+double w_delta = 10;
+double w_a = 10;
+double w_delta_diff = 100; // for smoother lane change
+double w_a_diff = 10;     // for smoother acceleration
+
 // set up indices
 // [x1, x2, ..xN, y1, y2, ..yN, psi1, psi2, ..psiN, v1, v2, ..vN, 
 // cte1, cte2, ..cteN, epsi1, epsi2, ...epsiN,
@@ -40,15 +50,6 @@ class FG_eval {
   //`vars` is a vector of variable values (state & actuators)
   void operator()(ADvector& fg, const ADvector& vars) {
 
-    // weigths for cost function
-    double w_cte = 2000;
-    double w_epsi = 2000;
-    double w_v = 1;
-    double w_delta = 10;
-    double w_a = 10;
-    double w_delta_diff = 100;
-    double w_a_diff = 10;
-
     // set up cost/objective function, FG_eval expects cost function in fg[0]
     fg[0] = 0.0;
     // penalize cross track error, orientation erro and velocity error
@@ -75,7 +76,7 @@ class FG_eval {
     fg[1 + v_start] = vars[v_start];
     fg[1 + cte_start] = vars[cte_start];
     fg[1 + epsi_start] = vars[epsi_start];
-    
+
     for(uint32_t t = 1; t < N; ++t) {
       AD<double> x1 = vars[x_start + t];
       AD<double> y1 = vars[y_start + t];
@@ -133,14 +134,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   for (uint32_t i = 0; i < n_vars; i++) {
     vars[i] = 0;
   }
-
-  // set initial value of the variables
-  // vars[x_start] = x;
-  // vars[y_start] = y;
-  // vars[psi_start] = psi;
-  // vars[v_start] = v;
-  // vars[cte_start] = cte;
-  // vars[epsi_start] = epsi;
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);

@@ -175,9 +175,9 @@ int main() {
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
           // predicted x and y values
-          uint32_t n_pts = 20;
-          double step = 2.0; 
-          for(uint32_t i = 0; i < n_pts; ++i) {
+          uint32_t n_pts = 10;
+          double step = 5.0; 
+          for(uint32_t i = 1; i < n_pts; ++i) {
             next_x_vals.push_back(i * step);
             next_y_vals.push_back(polyeval(coeffs, i * step));
           }
