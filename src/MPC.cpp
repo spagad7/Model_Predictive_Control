@@ -6,7 +6,7 @@
 
 using CppAD::AD;
 
-size_t N = 20;
+size_t N = 10;
 double dt = 0.1;
 const double Lf = 2.67;     // Lf is the length from front to CoG that has a similar radius
 const double cte_ref = 0.0;
@@ -39,26 +39,43 @@ class FG_eval {
   // `fg` a vector of the cost constraints
   //`vars` is a vector of variable values (state & actuators)
   void operator()(ADvector& fg, const ADvector& vars) {
+
+    // weigths for cost function
+    double w_cte = 2000;
+    double w_epsi = 2000;
+    double w_v = 1;
+    double w_delta = 10;
+    double w_a = 10;
+    double w_delta_diff = 100;
+    double w_a_diff = 10;
+
     // set up cost/objective function, FG_eval expects cost function in fg[0]
     fg[0] = 0.0;
     // penalize cross track error, orientation erro and velocity error
     for(uint32_t t = 0; t < N; ++t) {
-      fg[0] += CppAD::pow(vars[cte_start + t] - cte_ref, 2);
-      fg[0] += CppAD::pow(vars[epsi_start + t] - epsi_ref, 2);
-      fg[0] += CppAD::pow(vars[v_start + t] - v_ref, 2);
+      fg[0] += w_cte * CppAD::pow(vars[cte_start + t] - cte_ref, 2);
+      fg[0] += w_epsi * CppAD::pow(vars[epsi_start + t] - epsi_ref, 2);
+      fg[0] += w_v * CppAD::pow(vars[v_start + t] - v_ref, 2);
     }
     // penalize actuations
     for(uint32_t t = 0; t < N-1; ++t) {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t], 2);
+      fg[0] += w_delta * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += w_a * CppAD::pow(vars[a_start + t], 2);
     }
     // penalize change in actuations
     for(uint32_t t = 0; t < N-2; ++t) {
-      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += w_delta_diff * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += w_a_diff * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     // set up constraints
+    fg[1 + x_start] = vars[x_start];
+    fg[1 + y_start] = vars[y_start];
+    fg[1 + psi_start] = vars[psi_start];
+    fg[1 + v_start] = vars[v_start];
+    fg[1 + cte_start] = vars[cte_start];
+    fg[1 + epsi_start] = vars[epsi_start];
+    
     for(uint32_t t = 1; t < N; ++t) {
       AD<double> x1 = vars[x_start + t];
       AD<double> y1 = vars[y_start + t];
@@ -82,10 +99,10 @@ class FG_eval {
 
       fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-      fg[1 + psi_start + t] = psi1 - (psi0 + (v0 * delta0 * dt)/Lf);
+      fg[1 + psi_start + t] = psi1 - (psi0 - (v0 * delta0 * dt)/Lf);
       fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
-      fg[1 + cte_start + t] = f_x - (y0 + v0 * CppAD::sin(epsi0) * dt);
-      fg[1 + epsi_start + t] =  psi0 - (f_x_dash + (v0 * delta0 * dt)/Lf); 
+      fg[1 + cte_start + t] = cte1 - (f_x - y0 + v0 * CppAD::sin(epsi0) * dt);
+      fg[1 + epsi_start + t] =  epsi1 - (psi0 - f_x_dash - (v0 * delta0 * dt)/Lf); 
     }
   }
 };
@@ -118,12 +135,12 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   // set initial value of the variables
-  vars[x_start] = x;
-  vars[y_start] = y;
-  vars[psi_start] = psi;
-  vars[v_start] = v;
-  vars[cte_start] = cte;
-  vars[epsi_start] = epsi;
+  // vars[x_start] = x;
+  // vars[y_start] = y;
+  // vars[psi_start] = psi;
+  // vars[v_start] = v;
+  // vars[cte_start] = cte;
+  // vars[epsi_start] = epsi;
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);

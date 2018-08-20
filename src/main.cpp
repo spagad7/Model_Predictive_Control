@@ -136,8 +136,9 @@ int main() {
           double epsi_lat = epsi + (v * -delta * latency) / Lf;
 
           Eigen::VectorXd state(6);
+          //state << 0, 0, 0, v, cte, epsi;
           // car starts at x=0, y=0 with v=0
-          state << x_lat, y_lat, v_lat, psi_lat, cte_lat, epsi_lat;
+          state << x_lat, y_lat, psi_lat, v_lat, cte_lat, epsi_lat;
 
           auto result = mpc.Solve(state, coeffs);
 
